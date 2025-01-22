@@ -1,0 +1,77 @@
+import rasterio
+import numpy as np
+from pyproj import Transformer
+import matplotlib.pyplot as plt
+import os
+
+def compute_pixel_center_latlon(
+    tiff_file_path, 
+    output_dir=None, 
+    visualize=False
+):
+    """
+    Computes the central latitude and longitude mesh grids for each pixel in a GeoTIFF file.
+
+    Parameters:
+        tiff_file_path (str): Path to the GeoTIFF file.
+        output_dir (str): Directory to save the latitude and longitude mesh grids as .npy files. If None, results are not saved.
+        visualize (bool): Whether to visualize the longitude mesh grid.
+
+    Returns:
+        tuple: (lat_mesh, lon_mesh), where lat_mesh and lon_mesh are the latitude and longitude mesh grids.
+    """
+    # Open the GeoTIFF file
+    with rasterio.open(tiff_file_path) as src:
+        # Extract transform, width, height, and CRS
+        transform = src.transform
+        width = src.width
+        height = src.height
+        crs = src.crs
+
+    # Get the pixel coordinates
+    x_coords = np.arange(width)
+    y_coords = np.arange(height)
+
+    # Generate the mesh grid for pixel centers
+    x_pixel, y_pixel = np.meshgrid(x_coords, y_coords)
+
+    # Adjust the pixel coordinates to represent the center of each pixel
+    utm_x = transform[2] + (x_pixel + 0.5) * transform[0]  # Add 0.5 pixel width
+    utm_y = transform[5] + (y_pixel + 0.5) * transform[4]  # Add 0.5 pixel height
+
+    # Transform UTM to latitude/longitude
+    transformer = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
+    lon, lat = transformer.transform(utm_x, utm_y)
+
+    # Print information
+    print(f"Latitude Mesh Grid Shape: {lat.shape}")
+    print(f"Longitude Mesh Grid Shape: {lon.shape}")
+
+    # Save the latitude/longitude mesh grids if output_dir is specified
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        np.save(os.path.join(output_dir, "latitude_center_mesh.npy"), lat)
+        np.save(os.path.join(output_dir, "longitude_center_mesh.npy"), lon)
+        print(f"Latitude and longitude mesh grids saved to {output_dir}")
+
+    # Visualize the longitude mesh grid if requested
+    if visualize:
+        plt.figure(figsize=(8, 6))
+        plt.title("Longitude Mesh Grid (Pixel Centers)")
+        plt.imshow(lon, cmap='viridis', extent=(lon.min(), lon.max(), lat.min(), lat.max()))
+        plt.colorbar(label="Longitude")
+        plt.xlabel("Pixel X")
+        plt.ylabel("Pixel Y")
+        plt.show()
+
+    return lat, lon
+
+# Example usage:
+if __name__ == "__main__":
+    tiff_file_path = "your_file_path_here.tif"
+    output_dir = "output_directory"
+    lat_mesh, lon_mesh = compute_pixel_center_latlon(
+        tiff_file_path=tiff_file_path,
+        output_dir=output_dir,
+        visualize=True
+    ) 
