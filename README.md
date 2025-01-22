@@ -21,3 +21,12 @@ You can install the required libraries using:
 
 ```bash
 pip install rasterio numpy pyproj matplotlib
+
+Usage
+1. Clone the repositor
+git clone https://github.com/your_username/geotiff-latlon-extraction.git
+cd geotiff-latlon-extraction
+
+
+2. Run the script with your GeoTIFF file:
+python compute_latlon.py --tiff_file /path/to/your/file.tif --output_dir /path/to/save/results --visualize
